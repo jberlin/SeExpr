@@ -30,8 +30,6 @@
 #include <QLineEdit>
 #include <QCheckBox>
 #include <QSlider>
-#include <QListWidget>
-#include <QStackedWidget>
 #include "ExprControl.h"
 
 class QVBoxLayout;

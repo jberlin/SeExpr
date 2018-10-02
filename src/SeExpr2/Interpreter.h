@@ -93,8 +93,8 @@ class Interpreter : public Evaluator {
             assert(false && "addOp called within another addOp");
         }
         _startedOp = true;
-        int pc = ops.size();
-        ops.push_back(std::make_pair(op, opData.size()));
+        int pc = static_cast<int>(ops.size());
+        ops.push_back(std::make_pair(op, static_cast<int>(opData.size())));
         return pc;
     }
 
@@ -115,7 +115,7 @@ class Interpreter : public Evaluator {
     int addOperand(int param)
     {
         assert(_startedOp);
-        int ret = opData.size();
+        int ret = static_cast<int>(opData.size());
         opData.push_back(param);
         return ret;
     }

@@ -31,11 +31,15 @@
 #include "ExprEnv.h"
 #include "Platform.h"
 
+<<<<<<< HEAD:src/SeExpr/Expression.cpp
 #include "LLVMEvaluator.h"
+=======
+#include "Evaluator.h"
+#include "ExprWalker.h"
+>>>>>>> upstream-master:src/SeExpr2/Expression.cpp
 
 #include <cstdio>
 #include <typeinfo>
-#include <ExprWalker.h>
 
 namespace SeExpr2 {
 
@@ -46,7 +50,13 @@ bool Expression::debugging = getenv("SE_EXPR_DEBUG") != 0;
 static Expression::EvaluationStrategy chooseDefaultEvaluationStrategy()
 {
     if (Expression::debugging) {
-        std::cerr << "SeExpr2 Debug Mode Enabled " << __VERSION__ << std::endl;
+        std::cerr << "SeExpr2 Debug Mode Enabled " <<
+#if defined(WINDOWS)
+            _MSC_FULL_VER
+#else
+            __VERSION__
+#endif
+            << std::endl;
     }
 #ifdef SEEXPR_ENABLE_LLVM
     if (char* env = getenv("SE_EXPR_EVAL")) {
@@ -292,10 +302,10 @@ void Expression::prep() const
         const char* p = _expression.c_str();
         while (*p != 0) {
             if (*p == '\n')
-                lines.push_back(p - start);
+                lines.push_back(static_cast<int>(p - start));
             p++;
         }
-        lines.push_back(p - start);
+        lines.push_back(static_cast<int>(p - start));
 
         std::stringstream sstream;
         for (unsigned int i = 0; i < _errors.size(); i++) {
@@ -328,10 +338,37 @@ const ExprType& Expression::returnType() const
     return _returnType;
 }
 
+const double* Expression::evalFP(VarBlock* varBlock) const {
+    prepIfNeeded();
+    if (_isValid) {
+        if (_evaluationStrategy == UseInterpreter) {
+            _interpreter->eval(varBlock);
+            return (varBlock && varBlock->threadSafe) ? &(varBlock->d[_returnSlot]) : &_interpreter->d[_returnSlot];
+        } else {  // useLLVM
+            return _llvmEvaluator->evalFP(varBlock);
+        }
+    }
+    static double noCrash[16] = {};
+    return noCrash;
+}
+
 void Expression::evalMultiple(VarBlock* varBlock, int outputVarBlockOffset, size_t rangeStart, size_t rangeEnd) const
 {
     assert(varBlock);
     double* outputPtr = const_cast<double*&>(varBlock->Pointer(outputVarBlockOffset));
     evaluator()->evalMultiple(varBlock, outputPtr, rangeStart, rangeEnd);
+}
+
+const char* Expression::evalStr(VarBlock* varBlock) const {
+    prepIfNeeded();
+    if (_isValid) {
+        if (_evaluationStrategy == UseInterpreter) {
+            _interpreter->eval(varBlock);
+            return (varBlock && varBlock->threadSafe) ? varBlock->s[_returnSlot] : _interpreter->s[_returnSlot];
+        } else {  // useLLVM
+            return _llvmEvaluator->evalStr(varBlock);
+        }
+    }
+    return 0;
 }
 }  // end namespace SeExpr2/

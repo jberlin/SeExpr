@@ -21,7 +21,10 @@
 #ifndef ExprBrowser_h
 #define ExprBrowser_h
 
-#include <atomic>
+#include <QWidget>
+#include <QAbstractItemModel>
+
+#include <iostream>
 #include <fstream>
 #include <iostream>
 #include <memory>

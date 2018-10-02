@@ -19,6 +19,22 @@
 * @author  aselle
 */
 
+#include <QDir>
+#include <QFileInfo>
+#include <QTreeWidget>
+#include <QTreeWidgetItem>
+#include <QVBoxLayout>
+#include <QTabWidget>
+#include <QHeaderView>
+#include <QLabel>
+#include <QTextBrowser>
+#include <QPushButton>
+#include <QSpacerItem>
+#include <QSizePolicy>
+#include <QSortFilterProxyModel>
+#include <QFileDialog>
+#include <QMessageBox>
+
 #include <cassert>
 #include <functional>
 

@@ -21,12 +21,20 @@
 #ifndef ExprEditor_h
 #define ExprEditor_h
 
-#include <QLineEdit>
-#include <QSplitter>
-#include <QTextEdit>
-#include <QTimer>
-#include <QToolButton>
+#include <vector>
 
+#include <QTextBrowser>
+#include <QPlainTextEdit>
+#include <QDialog>
+#include <QTimer>
+#include <QRegExp>
+#include <QLineEdit>
+#include <QCheckBox>
+#include <QSlider>
+
+class QLabel;
+class QPushButton;
+class QLineEdit;
 class QMouseEvent;
 class QPaintEvent;
 class QKeyEvent;

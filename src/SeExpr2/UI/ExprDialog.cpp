@@ -19,6 +19,14 @@
 * @author  jlacewel
 */
 
+#include "ExprBrowser.h"
+#include "ExprGrapher2d.h"
+#include "ExprDialog.h"
+#include "ExprControlCollection.h"
+
+#include <QDir>
+#include <QApplication>
+#include <QLabel>
 #include <iostream>
 #include <fstream>
 

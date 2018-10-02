@@ -20,6 +20,14 @@
 #include <cstdlib>
 #include <cmath>
 #include <iostream>
+#include "Platform.h"
+
+// To fix differences in template TYPENAME resolution between MSVC and other compilers
+#if defined(WINDOWS)
+#   define TYPENAME
+#else
+#   define TYPENAME typename
+#endif
 
 //#############################################################################
 // Template Metaprogramming Helpers
@@ -42,6 +50,9 @@ struct my_enable_if {
 //! Enable_if failure case (substitution failure is not an error)
 template <class T>
 struct my_enable_if<false, T> {
+#if defined(WINDOWS)
+    typedef void TYPE;
+#endif
 };
 
 //! Static conditional type true case
@@ -184,7 +195,7 @@ class Vec {
     // for value it copies
     //! Copy construct. Only valid if we are not going to be a reference data!
     // Vec(const Vec&)
-    //{typename static_assert<!ref,INVALID_WITH_VECTOR_REFERENCE>::TYPE();}
+    //{TYPENAME static_assert<!ref,INVALID_WITH_VECTOR_REFERENCE>::TYPE();}
 
     //! Copy construct. Only valid if we are not going to be reference data!
     template <class T2, bool refother>

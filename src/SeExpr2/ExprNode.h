@@ -563,6 +563,7 @@ class ExprBinaryOpNode : public ExprNode {
     virtual LLVM_VALUE codegen(LLVM_BUILDER) LLVM_BODY;
 
     char _op;
+    char* _out;
 };
 
 /// Node that references a variable

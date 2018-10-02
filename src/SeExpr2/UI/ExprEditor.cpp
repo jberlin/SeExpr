@@ -18,31 +18,36 @@
 * @brief This provides an expression editor for SeExpr syntax with auto ui features
 * @author  aselle
 */
-#include <QAbstractItemView>
-#include <QAction>
-#include <QCompleter>
-#include <QHBoxLayout>
-#include <QKeyEvent>
-#include <QLabel>
-#include <QLineEdit>
-#include <QListWidget>
-#include <QMenu>
-#include <QMimeData>
-#include <QMouseEvent>
-#include <QPaintEvent>
-#include <QPushButton>
 #include <QRegExp>
-#include <QScrollBar>
-#include <QSizePolicy>
-#include <QToolButton>
-#include <QToolTip>
-#include <QTreeView>
+#include <QLineEdit>
+#include <QPushButton>
+#include <QSplitter>
+#include <QLabel>
+#include <QMouseEvent>
+#include <QKeyEvent>
+#include <QHBoxLayout>
 #include <QVBoxLayout>
+#include <QPaintEvent>
+#include <QPainter>
+#include <QScrollArea>
+#include <QSpacerItem>
+#include <QSizePolicy>
+#include <QTextCharFormat>
+#include <QCompleter>
+#include <QAbstractItemView>
+#include <QStandardItemModel>
+#include <QStringListModel>
+#include <QScrollBar>
+#include <QToolTip>
+#include <QListWidget>
+#include <QTreeView>
+#include <QAction>
+#include <QMenu>
 
-#include <SeExpr2/Expression.h>
-#include <SeExpr2/ExprNode.h>
-#include <SeExpr2/ExprFunc.h>
-#include <SeExpr2/ExprBuiltins.h>
+#include "../Expression.h"
+#include "../ExprNode.h"
+#include "../ExprFunc.h"
+#include "../ExprBuiltins.h"
 
 #include "ExprEditor.h"
 #include "ExprHighlighter.h"

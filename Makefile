@@ -11,6 +11,7 @@ XARGS ?= xargs
 
 ## Path and build flags
 FLAVOR ?= optimize
+BUILD = build/$(FLAVOR)
 #prefix ?= /usr/local
 #libdir ?= lib
 
@@ -29,41 +30,32 @@ ifdef FLAVOR
     CMAKE_ARGS += -DFLAVOR=$(FLAVOR)
 endif
 
+CMAKE_FILES += Makefile
+CMAKE_FILES += $(wildcard CMakeLists.txt */*/CMakeLists.txt)
+
 export CXX
 export DESTDIR
 export prefix
 
-all:
-	$(MKDIR) build/$(FLAVOR)
-	cd build/$(FLAVOR) && $(CMAKE) $(CMAKE_ARGS) $(EXTRA_CMAKE_ARGS) ../..
-	$(MAKE) -C build/$(FLAVOR) all
-.PHONY: all
-
-clean:
-	$(RM_R) build/$(FLAVOR) Linux-*
-.PHONY: clean
+all: $(BUILD)
+	$(MAKE) -C $(BUILD) $@
 
 install: all
-	$(MAKE) -C build/$(FLAVOR) install
-.PHONY: install
+	$(MAKE) -C $(BUILD) $@
 
-checkDirty:
-	git diff --exit-code > /dev/null
-.PHONY: checkDirty
+test: all
+	$(MAKE) -C $(BUILD) $@
+
+clean:
+	$(RM_R) $(BUILD) Linux-* Darwin-*
+
+$(BUILD): $(CMAKE_FILES)
+	mkdir -p $(BUILD)
+	cd $(BUILD) && $(CMAKE) $(CMAKE_ARGS) $(EXTRA_CMAKE_ARGS) ../..
+	touch $@
 
 format:
-	$(FIND) $(CURDIR)/src -name '*.cpp' | $(XARGS) $(CLANG_FORMAT) -i
-	$(FIND) $(CURDIR)/src -name '*.h' | $(XARGS) $(CLANG_FORMAT) -i
-.PHONY: format
-
-test: install
-	$(MAKE) -C build/$(FLAVOR) test
-.PHONY: test
-
-# TODO: run this via cmake
-imagetest: install
-	$(PYTHON) src/tests/imageTestsReportNew.py runall
-.PHONY: imagetest
+	git ls-files '*.cpp' '*.h' | $(XARGS) $(CLANG_FORMAT) -i
 
 precommit:
 	$(MAKE) format

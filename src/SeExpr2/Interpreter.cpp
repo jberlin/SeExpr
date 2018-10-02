@@ -17,9 +17,13 @@
 #include "ExprNode.h"
 #include "Interpreter.h"
 #include "VarBlock.h"
+#include "Platform.h"
 #include <iostream>
 #include <cstdio>
+#include <algorithm>
+#if !defined(WINDOWS)
 #include <dlfcn.h>
+#endif
 
 // TODO: optimize to write to location directly on a CondNode
 namespace SeExpr2 {
@@ -68,7 +72,7 @@ void Interpreter::eval(VarBlock* block, bool debug) const
     double* fp = &state.d[0];
     char** str = &state.s[0];
     int pc = _pcStart;
-    int end = ops.size();
+    int end = static_cast<int>(ops.size());
     while (pc < end) {
         if (debug) {
             std::cerr << "Running op at " << pc << std::endl;
@@ -84,12 +88,14 @@ void Interpreter::print(int pc) const
 {
     std::cerr << "---- ops     ----------------------" << std::endl;
     for (size_t i = 0; i < ops.size(); i++) {
-        Dl_info info;
         const char* name = "";
+#if !defined(WINDOWS)
+        Dl_info info;
         if (dladdr((void*)ops[i].first, &info))
             name = info.dli_sname;
+#endif
         fprintf(stderr, "%s %s %p (", pc == (int)i ? "-->" : "   ", name, ops[i].first);
-        int nextGuy = (i == ops.size() - 1 ? opData.size() : ops[i + 1].second);
+        int nextGuy = (i == ops.size() - 1 ? static_cast<int>(opData.size()) : ops[i + 1].second);
         for (int k = ops[i].second; k < nextGuy; k++) {
             fprintf(stderr, " %d", opData[k]);
         }
@@ -166,6 +172,40 @@ static Interpreter::OpF getTemplatizedOp2(int i)
 }
 
 namespace {
+
+//! Binary operator for strings. Currently only handle '+'
+struct BinaryStringOp {
+    static int f(int* opData, double* fp, char** c, std::vector<int>& callStack) {
+        // get the operand data
+        char*& out = *(char**)c[opData[0]];
+        char* in1 = c[opData[1]];
+        char* in2 = c[opData[2]];
+
+        // delete previous data and allocate a new buffer, only if needed
+        // NOTE: this is more efficient, but might consume more memory...
+        // Maybe make this behaviour configurable ?
+        int len1 = static_cast<int>(strlen(in1));
+        int len2 = static_cast<int>(strlen(in2));
+        if (out == 0 || len1 + len2 + 1 > strlen(out))
+        {
+            delete [] out;
+            out = new char [len1 + len2 + 1];
+        }
+
+        // clear previous evaluation content
+        memset(out, 0, len1 + len2 + 1);
+
+        // concatenate strings
+        strcat(out, in1);
+        strcat(out + len1, in2);
+        out[len1 + len2] = '\0';
+
+        // copy to the output
+        c[opData[3]] = out;
+
+        return 1;
+    }
+};
 
 //! Computes a binary op of vector dimension d
 template <char op, int d>
@@ -352,7 +392,11 @@ struct EvalVar {
     static int f(const int* opData, double* fp, char** c)
     {
         ExprVarRef* ref = reinterpret_cast<ExprVarRef*>(c[opData[0]]);
-        ref->eval(fp + opData[1]);  // ,c+opData[1]);
+        if (ref->type().isFP()) {
+            ref->eval(fp + opData[1]);
+        } else {
+            ref->eval(const_cast<const char**>(c + opData[1]));
+        }
         return 1;
     }
 };
@@ -498,11 +542,55 @@ int ExprLocalFunctionNode::buildInterpreter(Interpreter* interpreter) const
     return 0;
 }
 
-int ExprLocalFunctionNode::buildInterpreterForCall(const ExprFuncNode* callerNode, Interpreter* interpreter) const
-{
-    std::cerr << "Local Functions are deprecated" << std::endl;
-    exit(1);
-    return 0;
+int ExprLocalFunctionNode::buildInterpreterForCall(const ExprFuncNode* callerNode, Interpreter* interpreter) const {
+    std::vector<int> operands;
+    for (int c = 0; c < callerNode->numChildren(); c++) {
+        const ExprNode* child = callerNode->child(c);
+        // evaluate the argument
+        int operand = callerNode->child(c)->buildInterpreter(interpreter);
+        if (child->type().isFP()) {
+            if (callerNode->promote(c) != 0) {
+                // promote the argument to the needed type
+                interpreter->addOp(getTemplatizedOp<Promote>(callerNode->promote(c)));
+                // int promotedOperand=interpreter->allocFP(callerNode->promote(c));
+                interpreter->addOperand(operand);
+                interpreter->addOperand(prototype()->interpreterOps(c));
+                interpreter->endOp();
+            } else {
+                interpreter->addOp(getTemplatizedOp<AssignOp>(child->type().dim()));
+                interpreter->addOperand(operand);
+                interpreter->addOperand(prototype()->interpreterOps(c));
+                interpreter->endOp();
+            }
+        } else {
+            // TODO: string
+            assert(false);
+        }
+        operands.push_back(operand);
+    }
+    int outoperand = -1;
+    if (callerNode->type().isFP())
+        outoperand = interpreter->allocFP(callerNode->type().dim());
+    else if (callerNode->type().isString())
+        outoperand = interpreter->allocPtr();
+    else
+        assert(false);
+
+    int basePC = interpreter->nextPC();
+    interpreter->addOp(ProcedureCall);
+    int returnAddress = interpreter->addOperand(0);
+    interpreter->addOperand(_procedurePC - basePC);
+    interpreter->endOp(false);
+    // set return address
+    interpreter->opData[returnAddress] = interpreter->nextPC();
+
+    // TODO: copy result back and string
+    interpreter->addOp(getTemplatizedOp<AssignOp>(callerNode->type().dim()));
+    interpreter->addOperand(_returnedDataOp);
+    interpreter->addOperand(outoperand);
+    interpreter->endOp();
+
+    return outoperand;
 }
 
 int ExprNode::buildInterpreter(Interpreter* interpreter) const
@@ -551,33 +639,68 @@ int ExprBinaryOpNode::buildInterpreter(Interpreter* interpreter) const
     op1 = promoteOperand(interpreter, child(1)->type(), type(), op1);
 
     int dimout = type().dim();
-    switch (_op) {
-    case '+':
-        interpreter->addOp(getTemplatizedOp2<'+', BinaryOp>(dimout));
-        break;
-    case '-':
-        interpreter->addOp(getTemplatizedOp2<'-', BinaryOp>(dimout));
-        break;
-    case '*':
-        interpreter->addOp(getTemplatizedOp2<'*', BinaryOp>(dimout));
-        break;
-    case '/':
-        interpreter->addOp(getTemplatizedOp2<'/', BinaryOp>(dimout));
-        break;
-    case '^':
-        interpreter->addOp(getTemplatizedOp2<'^', BinaryOp>(dimout));
-        break;
-    case '%':
-        interpreter->addOp(getTemplatizedOp2<'%', BinaryOp>(dimout));
-        break;
-    default:
-        assert(false);
+
+    // check if the node will output a string of numerical value
+    bool isString = child0->type().isString() || child1->type().isString();
+
+    // add the operator
+    if (isString == false) {
+        switch (_op) {
+            case '+':
+                interpreter->addOp(getTemplatizedOp2<'+', BinaryOp>(dimout));
+                break;
+            case '-':
+                interpreter->addOp(getTemplatizedOp2<'-', BinaryOp>(dimout));
+                break;
+            case '*':
+                interpreter->addOp(getTemplatizedOp2<'*', BinaryOp>(dimout));
+                break;
+            case '/':
+                interpreter->addOp(getTemplatizedOp2<'/', BinaryOp>(dimout));
+                break;
+            case '^':
+                interpreter->addOp(getTemplatizedOp2<'^', BinaryOp>(dimout));
+                break;
+            case '%':
+                interpreter->addOp(getTemplatizedOp2<'%', BinaryOp>(dimout));
+                break;
+            default:
+                assert(false);
+        }
+    } else {
+        switch (_op) {
+            case '+': {
+                interpreter->addOp(BinaryStringOp::f);
+                int intermediateOp = interpreter->allocPtr();
+                interpreter->s[intermediateOp] = (char*)(&_out);
+                interpreter->addOperand(intermediateOp);
+                break;
+            }
+            default:
+                assert(false);
+        }
     }
-    int op2 = interpreter->allocFP(dimout);
+
+    // allocate the output
+    int op2 = -1;
+    if (isString == false) {
+        op2 = interpreter->allocFP(dimout);
+    } else {
+        op2 = interpreter->allocPtr();
+    }
+
     interpreter->addOperand(op0);
     interpreter->addOperand(op1);
     interpreter->addOperand(op2);
-    interpreter->endOp();
+
+    // NOTE: one of the operand can be a function. If it's the case for
+    // strings, since functions are not immediately executed (they have
+    // endOp(false)) using endOp() here would result in a nullptr
+    // input operand during eval, thus the following arg to endOp.
+    //
+    // TODO: only stop execution if one of the operand is either a
+    // function of a var ref.
+    interpreter->endOp(isString == false);
 
     return op2;
 }

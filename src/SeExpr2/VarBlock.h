@@ -95,6 +95,15 @@ class VarBlock {
     // i.e.  _dataPtrs[someAttributeOffset][indirectIndex]
     int indirectIndex;
 
+    /// if true, interpreter's data will be copied to this instance before evaluation.
+    bool threadSafe;
+
+    /// copy of Interpreter's double data
+    std::vector<double> d;
+
+    /// copy of Interpreter's str data
+    std::vector<char*> s;
+
     /// Raw data of the data block pointer (used by compiler)
     const char** data()
     {
