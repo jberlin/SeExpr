@@ -67,7 +67,7 @@ void Interpreter::eval(VarBlock* block, bool debug) const
     if (block) {
         static_assert(sizeof(char*) == sizeof(size_t), "Expect to fit size_t in char*");
         state.s[0] = reinterpret_cast<char*>(block->data());
-        state.s[1] = reinterpret_cast<char*>(block->indirectIndex);
+        state.s[1] = reinterpret_cast<char*>(static_cast<size_t>(block->indirectIndex));
     }
     double* fp = &state.d[0];
     char** str = &state.s[0];

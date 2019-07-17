@@ -83,7 +83,7 @@ class Interpreter : public Evaluator {
     /// Return the position that the next instruction will be placed at
     int nextPC()
     {
-        return ops.size();
+        return static_cast<int>(ops.size());
     }
 
     ///! adds an operator to the program (pointing to the data at the current location)
@@ -104,7 +104,7 @@ class Interpreter : public Evaluator {
         if (execute) {
             double* fp = &state.d[0];
             char** str = &state.s[0];
-            int pc = ops.size() - 1;
+            int pc = static_cast<int>(ops.size()) - 1;
             const std::pair<OpF, int>& op = ops[pc];
             int* opCurr = &opData[0] + op.second;
             pc += op.first(opCurr, fp, str);
@@ -123,7 +123,7 @@ class Interpreter : public Evaluator {
     ///! Allocate a floating point set of data of dimension n
     int allocFP(int n)
     {
-        int ret = state.d.size();
+        int ret = static_cast<int>(state.d.size());
         for (int k = 0; k < n; k++)
             state.d.push_back(0);
         return ret;
@@ -132,7 +132,7 @@ class Interpreter : public Evaluator {
     /// Allocate a pointer location (can be anything, but typically space for char*)
     int allocPtr()
     {
-        int ret = state.s.size();
+        int ret = static_cast<int>state.s.size());
         state.s.push_back(nullptr);
         return ret;
     }

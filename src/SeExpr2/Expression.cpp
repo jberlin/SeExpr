@@ -31,12 +31,8 @@
 #include "ExprEnv.h"
 #include "Platform.h"
 
-<<<<<<< HEAD:src/SeExpr/Expression.cpp
 #include "LLVMEvaluator.h"
-=======
-#include "Evaluator.h"
 #include "ExprWalker.h"
->>>>>>> upstream-master:src/SeExpr2/Expression.cpp
 
 #include <cstdio>
 #include <typeinfo>
@@ -310,7 +306,7 @@ void Expression::prep() const
         std::stringstream sstream;
         for (unsigned int i = 0; i < _errors.size(); i++) {
             auto lower = std::lower_bound(lines.begin(), lines.end(), _errors[i].startPos);
-            int line = lower - lines.begin();
+            int line = static_cast<int>(lower - lines.begin());
             int lineStart = line ? lines[line - 1] : 0;
             int col = _errors[i].startPos - lineStart;
             sstream << (line + 1) << ":" << col << ": error: " << _errors[i].error << std::endl;

@@ -126,7 +126,7 @@ class ExprNode {
     /// Number of children
     int numChildren() const
     {
-        return _children.size();
+        return static_cast<int>(_children.size());
     }
 
     /// Get 0 indexed child
